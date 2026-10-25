@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-qs_bin="/usr/bin/qs"
+qs_bin="$(command -v qs 2>/dev/null || command -v quickshell 2>/dev/null || echo "/usr/bin/qs")"
 user_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/inir"
 system_config_dir="${INIR_SYSTEM_RUNTIME_DIR:-/usr/local/share/quickshell/inir}"
 fallback_system_config_dir="${INIR_FALLBACK_SYSTEM_RUNTIME_DIR:-/usr/share/quickshell/inir}"
@@ -420,6 +420,10 @@ _inir_detect_stale_local_qs() {
         system_qs="/usr/bin/qs"
     elif [[ -x /usr/bin/quickshell ]]; then
         system_qs="/usr/bin/quickshell"
+    elif command -v qs >/dev/null 2>&1; then
+        system_qs="$(command -v qs)"
+    elif command -v quickshell >/dev/null 2>&1; then
+        system_qs="$(command -v quickshell)"
     fi
     [[ -z "$system_qs" ]] && return 1
 

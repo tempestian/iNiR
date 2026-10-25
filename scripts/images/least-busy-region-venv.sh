@@ -9,5 +9,9 @@ else
     _ii_venv="$HOME/.local/state/quickshell/.venv"
 fi
 source "$_ii_venv/bin/activate" 2>/dev/null || true
-"$_ii_venv/bin/python3" "$SCRIPT_DIR/least_busy_region.py" "$@"
+if [[ -x "$_ii_venv/bin/python3" ]]; then
+    "$_ii_venv/bin/python3" "$SCRIPT_DIR/least_busy_region.py" "$@"
+else
+    "$SCRIPT_DIR/least_busy_region.py" "$@"
+fi
 deactivate 2>/dev/null || true

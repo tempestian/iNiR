@@ -9,5 +9,9 @@ else
     _ii_venv="$HOME/.local/state/quickshell/.venv"
 fi
 source "$_ii_venv/bin/activate" 2>/dev/null || true
-"$_ii_venv/bin/python3" "$SCRIPT_DIR/find_regions.py" "$@"
+if [[ -x "$_ii_venv/bin/python3" ]]; then
+    "$_ii_venv/bin/python3" "$SCRIPT_DIR/find_regions.py" "$@"
+else
+    "$SCRIPT_DIR/find_regions.py" "$@"
+fi
 deactivate 2>/dev/null || true

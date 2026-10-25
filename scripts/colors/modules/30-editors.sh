@@ -19,6 +19,10 @@ NEOVIM_OMARCHY_OVERRIDE_FILE="$NEOVIM_PLUGIN_DIR/zz-inir-omarchy.lua"
 NEOVIM_THEMEGEN="$SCRIPT_DIR/neovim_themegen.sh"
 
 ensure_vscode_themegen() {
+  if [[ -x "$SCRIPT_DIR/bin/inir-vscode-themegen" ]]; then
+    VSCODE_THEMEGEN_BIN="$SCRIPT_DIR/bin/inir-vscode-themegen"
+    return 0
+  fi
   command -v go &>/dev/null || return 1
   mkdir -p "$STATE_DIR/user/generated/bin"
   if [[ ! -x "$VSCODE_THEMEGEN_BIN" || "$REPO_ROOT/go.mod" -nt "$VSCODE_THEMEGEN_BIN" || "$SCRIPT_DIR/vscode_themegen/main.go" -nt "$VSCODE_THEMEGEN_BIN" || "$SCRIPT_DIR/themegencommon/common.go" -nt "$VSCODE_THEMEGEN_BIN" ]]; then
@@ -28,6 +32,10 @@ ensure_vscode_themegen() {
 }
 
 ensure_opencode_themegen() {
+  if [[ -x "$SCRIPT_DIR/bin/inir-opencode-themegen" ]]; then
+    OPENCODE_THEMEGEN_BIN="$SCRIPT_DIR/bin/inir-opencode-themegen"
+    return 0
+  fi
   command -v go &>/dev/null || return 1
   mkdir -p "$STATE_DIR/user/generated/bin"
   if [[ ! -x "$OPENCODE_THEMEGEN_BIN" || "$REPO_ROOT/go.mod" -nt "$OPENCODE_THEMEGEN_BIN" || "$SCRIPT_DIR/opencode_themegen/main.go" -nt "$OPENCODE_THEMEGEN_BIN" || "$SCRIPT_DIR/themegencommon/common.go" -nt "$OPENCODE_THEMEGEN_BIN" ]]; then

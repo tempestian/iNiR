@@ -16,13 +16,24 @@ let
       (builtins.hasAttr "qt6" pkgs && builtins.hasAttr name pkgs.qt6)
       (builtins.getAttr name pkgs.qt6);
 
-  # InnerTube and browser-cookie extraction must share one closed Python
-  # environment; putting the yt-dlp executable in PATH does not expose its
-  # module or SecretStorage backend to this interpreter on Nix.
   pythonRuntime = pkgs.python3.withPackages (ps: [
-    ps.ytmusicapi
-    ps.yt-dlp
+    ps.click
+    ps.evdev
+    ps.kde-material-you-colors
+    ps.loguru
+    ps.material-color-utilities
+    ps.materialyoucolor
+    ps.numpy
+    ps.opencv4
+    ps.pillow
+    ps.psutil
+    ps.pycairo
+    ps.pygobject3
     ps.secretstorage
+    ps.tqdm
+    ps.websockets
+    ps.yt-dlp
+    ps.ytmusicapi
   ]);
 
   runtimeDeps =
@@ -35,7 +46,6 @@ let
       gawk
       git
       gnugrep
-      go
       gnused
       jq
       procps
@@ -59,6 +69,7 @@ let
       wireplumber
       yt-dlp
     ]
+    ++ optionalTop "bc"
     ++ optionalTop "brightnessctl"
     ++ optionalTop "cava"
     ++ optionalTop "ddcutil"
@@ -66,11 +77,13 @@ let
     ++ optionalTop "fish"
     ++ optionalTop "foot"
     ++ optionalTop "geoclue2"
+    ++ optionalTop "gnome-desktop"
     ++ optionalTop "hyprpicker"
     ++ optionalTop "gum"
     ++ optionalTop "imagemagick"
     ++ optionalTop "kitty"
     ++ optionalTop "libqalculate"
+    ++ optionalTop "matugen"
     ++ optionalTop "mpv"
     ++ optionalTop "nautilus"
     ++ optionalTop "networkmanager"
@@ -112,7 +125,6 @@ let
       "--set FONTCONFIG_FILE \"${materialSymbolsFont}\" \\";
 
   qmlDeps =
-    # kirigami-wrapped ships no QML files, use the unwrapped version.
     (lib.optional
       (builtins.hasAttr "kdePackages" pkgs && builtins.hasAttr "kirigami" pkgs.kdePackages)
       pkgs.kdePackages.kirigami.passthru.unwrapped)
@@ -123,6 +135,8 @@ let
     ++ optionalQt6 "qtmultimedia"
     ++ optionalQt6 "qtsvg"
     ++ optionalQt6 "qtwayland";
+
+  giDeps = (optionalTop "gnome-desktop") ++ [ pkgs.glib ];
 in
 pkgs.stdenvNoCC.mkDerivation {
   pname = "inir";
@@ -132,17 +146,7 @@ pkgs.stdenvNoCC.mkDerivation {
     filter = import ./runtime-source-filter.nix { inherit lib; root = ../.; };
   };
 
-  nativeBuildInputs = [ pkgs.makeWrapper pkgs.python3 pkgs.rsync ];
-
-  # Prevent patchShebangs from attempting to rewrite Python scripts;
-  # non-executable files are skipped during fixupPhase.
-  preFixup = ''
-    find "$out/share/quickshell/inir" -type f -name '*.py' -exec chmod -x {} +
-  '';
-
-  postFixup = ''
-    find "$out/share/quickshell/inir" -type f -name '*.py' -exec chmod +x {} +
-  '';
+  nativeBuildInputs = [ pkgs.makeWrapper pkgs.rsync pkgs.go pythonRuntime ];
 
   installPhase = ''
     runHook preInstall
@@ -152,20 +156,30 @@ pkgs.stdenvNoCC.mkDerivation {
 
     python3 sdata/lib/runtime-payload.py copy --root . --target "$runtime"
 
-    chmod +x "$runtime/setup" "$runtime/scripts/inir"
-    find "$runtime/scripts" -type f \( -name '*.sh' -o -name '*.fish' -o -name '*.py' \) -exec chmod +x {} \;
+    export GOCACHE="$TMPDIR/go-cache"
+    mkdir -p "$runtime/scripts/colors/bin"
+    go build -trimpath -o "$runtime/scripts/colors/bin/inir-vscode-themegen" ./scripts/colors/vscode_themegen
+    go build -trimpath -o "$runtime/scripts/colors/bin/inir-opencode-themegen" ./scripts/colors/opencode_themegen
+    go build -trimpath -o "$runtime/scripts/colors/bin/inir-zed-themegen" ./scripts/colors/zed_themegen
+    go build -trimpath -o "$runtime/scripts/colors/bin/inir-washi" ./scripts/colors/washi
 
-    # The source tree intentionally targets Arch, where helpers live under
-    # /usr/bin. NixOS does not provide that layout. Patch only the packaged
-    # copy and keep shebang lines intact.
+    find "$runtime/scripts" -type f -name '*.py' -exec sed -i -E '1s|^#!.*/bin/.*python.*|#!/usr/bin/env python3|' {} +
+    find "$runtime/scripts" -type f -name '*.sh' -exec sed -i -E '1s|^#!.*/bin/.*bash.*|#!/usr/bin/env bash|' {} +
+    find "$runtime/scripts" -type f -name '*.fish' -exec sed -i -E '1s|^#!.*/bin/.*fish.*|#!/usr/bin/env fish|' {} +
+
     find "$runtime/modules" "$runtime/services" "$runtime/defaults" "$runtime/scripts" \
       -type f \( -name '*.qml' -o -name '*.js' -o -name '*.sh' -o -name '*.py' \) \
       -exec sed -i '1!s#/usr/bin/##g' {} +
+
+    chmod +x "$runtime/setup" "$runtime/scripts/inir"
+    find "$runtime/scripts" -type f \( -name '*.sh' -o -name '*.fish' -o -name '*.py' \) -exec chmod +x {} +
+    patchShebangs "$runtime/scripts"
 
     makeWrapper "$runtime/scripts/inir" "$out/bin/inir" \
       --prefix PATH : "${lib.makeBinPath runtimeDeps}" \
       --prefix QML2_IMPORT_PATH : "${lib.makeSearchPath "lib/qt-6/qml" qmlDeps}" \
       --prefix QT_PLUGIN_PATH : "${lib.makeSearchPath "lib/qt-6/plugins" qmlDeps}" \
+      --prefix GI_TYPELIB_PATH : "${lib.makeSearchPath "lib/girepository-1.0" giDeps}" \
       ${materialSymbolsWrapperArg}
       --set-default INIR_SYSTEM_RUNTIME_DIR "$runtime" \
       --set-default INIR_FALLBACK_SYSTEM_RUNTIME_DIR "$runtime"
@@ -173,7 +187,11 @@ pkgs.stdenvNoCC.mkDerivation {
     runHook postInstall
   '';
 
-  passthru.runtimeDependencies = runtimeDeps;
+  passthru = {
+    inherit runtimeDeps qmlDeps;
+    qmlImportPath = lib.makeSearchPath "lib/qt-6/qml" qmlDeps;
+    qtPluginPath = lib.makeSearchPath "lib/qt-6/plugins" qmlDeps;
+  };
 
   meta = {
     description = "Complete desktop shell for Niri, built on Quickshell";

@@ -590,6 +590,10 @@ check_state_directories() {
 }
 
 check_python_packages() {
+    if python3 -c "import materialyoucolor, PIL, click, yt_dlp, ytmusicapi" &>/dev/null; then
+        doctor_pass "Python runtime dependencies present"
+        return 0
+    fi
     local venv="${XDG_STATE_HOME}/quickshell/.venv"
     local req=""
     local runtime_dir

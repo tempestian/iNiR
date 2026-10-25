@@ -48,5 +48,7 @@ in
     QT_LOGGING_RULES = "quickshell.dbus.properties=false;qt.qml.settings.warning=false;qt.core.qsettings.warning=false;kf.xmlgui=false;kf.coreaddons=false;kf.config.core=false;kf.iconthemes=false;qt.qpa.wayland.textinput.warning=false";
     QT_SCALE_FACTOR = "1";
     QT_SCALE_FACTOR_ROUNDING_POLICY = "RoundPreferFloor";
+    QML2_IMPORT_PATH = cfg.package.passthru.qmlImportPath or "";
+    QT_PLUGIN_PATH = cfg.package.passthru.qtPluginPath or "";
   };
 }

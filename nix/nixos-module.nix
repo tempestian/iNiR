@@ -4,6 +4,7 @@ let
   common = import ./module-common.nix { inherit lib pkgs; };
   cfg = config.programs.inir;
   wantedUnit = common.compositorUnit cfg.service.compositor;
+  runtimeDeps = cfg.package.passthru.runtimeDependencies or [ ];
 in
 {
   imports = [ common.optionsModule ];
@@ -17,7 +18,7 @@ in
       partOf = [ "niri.service" ];
       after = [ "niri.service" ];
       before = [ "xdg-desktop-autostart.target" ];
-      path = [ cfg.package ] ++ cfg.extraPackages;
+      path = [ cfg.package ] ++ runtimeDeps ++ cfg.extraPackages;
       environment = common.serviceEnvironment cfg;
       unitConfig = {
         Requisite = "niri.service";

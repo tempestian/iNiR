@@ -40,6 +40,10 @@ needs_rebuild() {
 
 ensure_zed_themegen() {
   local go_bin="$1"
+  if [[ -x "$SCRIPT_DIR/bin/inir-zed-themegen" ]]; then
+    ZED_THEMEGEN_BIN="$SCRIPT_DIR/bin/inir-zed-themegen"
+    return 0
+  fi
   [[ -f "$ZED_THEMEGEN_SRC" ]] || return 1
   mkdir -p "$STATE_DIR/user/generated/bin"
   if [[ -x "$ZED_THEMEGEN_BIN" ]] && ! needs_rebuild; then

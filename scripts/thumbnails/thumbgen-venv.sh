@@ -24,11 +24,23 @@ has_usable_systemd_user_manager() {
 if [[ -z "${INIR_THUMBGEN_SCOPED:-}" ]] &&
     has_usable_systemd_user_manager &&
     command -v systemd-run >/dev/null 2>&1; then
-    exec systemd-run --user --scope --quiet --collect \
-        --property="Description=iNiR wallpaper thumbnails" \
-        --setenv=INIR_THUMBGEN_SCOPED=1 \
-        --setenv=GIO_USE_VFS=local \
-        -- "$_ii_venv/bin/python3" "$SCRIPT_DIR/thumbgen.py" "$@"
+    if [[ -x "$_ii_venv/bin/python3" ]]; then
+        exec systemd-run --user --scope --quiet --collect \
+            --property="Description=iNiR wallpaper thumbnails" \
+            --setenv=INIR_THUMBGEN_SCOPED=1 \
+            --setenv=GIO_USE_VFS=local \
+            -- "$_ii_venv/bin/python3" "$SCRIPT_DIR/thumbgen.py" "$@"
+    else
+        exec systemd-run --user --scope --quiet --collect \
+            --property="Description=iNiR wallpaper thumbnails" \
+            --setenv=INIR_THUMBGEN_SCOPED=1 \
+            --setenv=GIO_USE_VFS=local \
+            -- "$SCRIPT_DIR/thumbgen.py" "$@"
+    fi
 fi
 
-exec env GIO_USE_VFS=local "$_ii_venv/bin/python3" "$SCRIPT_DIR/thumbgen.py" "$@"
+if [[ -x "$_ii_venv/bin/python3" ]]; then
+    exec env GIO_USE_VFS=local "$_ii_venv/bin/python3" "$SCRIPT_DIR/thumbgen.py" "$@"
+else
+    exec env GIO_USE_VFS=local "$SCRIPT_DIR/thumbgen.py" "$@"
+fi

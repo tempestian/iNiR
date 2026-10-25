@@ -7,6 +7,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 bin_dir="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/user/generated/bin"
 bin="$bin_dir/inir-washi"
+[[ -x "$here/bin/inir-washi" ]] && bin="$here/bin/inir-washi"
 
 stale() {
   [[ -x "$bin" ]] || return 0
