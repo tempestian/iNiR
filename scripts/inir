@@ -1685,7 +1685,9 @@ apply_niri_app_environment() {
     for name in XDG_MENU_PREFIX QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME \
                 QT_STYLE_OVERRIDE ELECTRON_OZONE_PLATFORM_HINT; do
         value="$(_niri_app_environment_value "$name" "$cfg")"
-        [[ -n "$value" ]] && export "${name}=${value}"
+        if [[ -n "$value" ]]; then
+            export "${name}=${value}"
+        fi
     done
 }
 
@@ -1792,14 +1794,14 @@ apply_qt_runtime_env() {
     # holds every icon/glyph the shell actually batches; measured 1007 MB ->
     # 785 MB RSS with no visual change.  Qt spills to additional atlases if one
     # fills, so nothing breaks if a texture doesn't fit.
-    [[ -z "${QSG_ATLAS_WIDTH:-}" ]] && export QSG_ATLAS_WIDTH=1024
-    [[ -z "${QSG_ATLAS_HEIGHT:-}" ]] && export QSG_ATLAS_HEIGHT=1024
+    [[ -z "${QSG_ATLAS_WIDTH:-}" ]] && export QSG_ATLAS_WIDTH=1024 || true
+    [[ -z "${QSG_ATLAS_HEIGHT:-}" ]] && export QSG_ATLAS_HEIGHT=1024 || true
 
     # Quickshell links jemalloc, whose defaults (4 arenas per core, 10 s dirty
     # decay) keep what the QML engine and the video decoders free: ~290 MB on a
     # 16-thread machine with a live wallpaper. Two arenas and a 1 s decay give
     # it back with no measurable CPU cost.
-    [[ -z "${MALLOC_CONF:-}" ]] && export MALLOC_CONF="background_thread:true,narenas:2,dirty_decay_ms:1000,muzzy_decay_ms:0,tcache_max:4096"
+    [[ -z "${MALLOC_CONF:-}" ]] && export MALLOC_CONF="background_thread:true,narenas:2,dirty_decay_ms:1000,muzzy_decay_ms:0,tcache_max:4096" || true
     # Mesa's GL worker thread buys nothing behind Qt's own render threads and
     # costs ~50 MB across the shell's windows. The mesa_glthread variable prints
     # a notice for every GL context (~2000 journal lines a day), so it is turned
@@ -1942,7 +1944,7 @@ resolve_config_dir() {
     fi
 
     local candidate
-    for candidate in "$user_config_dir" "$system_config_dir" "$fallback_system_config_dir"; do
+    for candidate in "$user_config_dir" "${INIR_SYSTEM_RUNTIME_DIR:-}" "$launcher_root" "$system_config_dir" "$fallback_system_config_dir"; do
         if [[ -n "$candidate" && -f "$candidate/shell.qml" ]]; then
             config_dir="$(canonicalize_path "$candidate")"
             return
