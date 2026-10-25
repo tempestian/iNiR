@@ -14,7 +14,19 @@ SHELL_CONFIG_FILE="$(inir_config_file)"
 TEMPLATE_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 
-# Validate critical runtime dependencies early
+if ! command -v jq &>/dev/null; then
+    _cand_jq="$(find /nix/store -maxdepth 3 -name jq -path '*-jq-*/bin/jq' 2>/dev/null | head -1)"
+    if [[ -n "$_cand_jq" && -x "$_cand_jq" ]]; then
+        export PATH="$(dirname "$_cand_jq"):$PATH"
+    fi
+fi
+if ! command -v matugen &>/dev/null; then
+    _cand_matugen="$(find /nix/store -maxdepth 3 -name matugen -path '*-matugen-*/bin/matugen' 2>/dev/null | head -1)"
+    if [[ -n "$_cand_matugen" && -x "$_cand_matugen" ]]; then
+        export PATH="$(dirname "$_cand_matugen"):$PATH"
+    fi
+fi
+
 if ! command -v jq &>/dev/null; then
     echo "[switchwall.sh] Missing required dependency: jq"
     if command -v xbps-install >/dev/null 2>&1; then
@@ -612,9 +624,13 @@ switch() {
     source "$_ii_venv/bin/activate" 2>/dev/null || true
     [[ -z "${_ii_python:-}" ]] && _ii_python="$_ii_venv/bin/python3"
     [[ ! -x "$_ii_python" ]] && _ii_python="python3"
-    if ! "$_ii_python" -c "import materialyoucolor" >/dev/null 2>&1; then
-        _cand="$(find /nix/store -maxdepth 3 -name python3 -path '*-python3-*-env/bin/python3' 2>/dev/null | head -1)"
-        [[ -n "$_cand" && -x "$_cand" ]] && _ii_python="$_cand"
+    if ! "$_ii_python" -c "import numpy, materialyoucolor" >/dev/null 2>&1; then
+        for _p in $(find /nix/store -maxdepth 3 -name python3 -path '*-python3-*-env/bin/python3' 2>/dev/null); do
+            if "$_p" -c "import numpy, materialyoucolor" >/dev/null 2>&1; then
+                _ii_python="$_p"
+                break
+            fi
+        done
     fi
 
     _scss_tmp="$STATE_DIR/user/generated/material_colors.scss.tmp"
