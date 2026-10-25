@@ -377,7 +377,16 @@ EOF
 
 find_qs() {
     if [[ ! -x "$qs_bin" ]]; then
-        qs_bin="$(command -v qs || true)"
+        qs_bin="$(command -v qs 2>/dev/null || command -v quickshell 2>/dev/null || true)"
+    fi
+
+    if [[ -z "${qs_bin:-}" || ! -x "$qs_bin" ]]; then
+        local _cand
+        _cand="$(find /nix/store -maxdepth 3 -name qs -path '*-quickshell-*/bin/qs' 2>/dev/null | head -1)"
+        [[ -z "$_cand" ]] && _cand="$(find /nix/store -maxdepth 3 -name quickshell -path '*-quickshell-*/bin/quickshell' 2>/dev/null | head -1)"
+        if [[ -n "$_cand" && -x "$_cand" ]]; then
+            qs_bin="$_cand"
+        fi
     fi
 
     if [[ -z "${qs_bin:-}" || ! -x "$qs_bin" ]]; then
