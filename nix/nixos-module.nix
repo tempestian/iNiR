@@ -4,7 +4,7 @@ let
   common = import ./module-common.nix { inherit lib pkgs; };
   cfg = config.programs.inir;
   wantedUnit = common.compositorUnit cfg.service.compositor;
-  runtimeDeps = cfg.package.passthru.runtimeDependencies or [ ];
+  runtimeDeps = cfg.package.passthru.runtimeDeps or cfg.package.passthru.runtimeDependencies or [ ];
 in
 {
   imports = [ common.optionsModule ];

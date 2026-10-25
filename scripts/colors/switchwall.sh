@@ -63,7 +63,14 @@ post_process() {
     local screen_width="$1"
     local screen_height="$2"
     local wallpaper_path="$3"
-    # Editor theming is handled by modules/30-editors.sh via applycolor.sh.
+    local matugen_target="$wallpaper_path"
+    [[ -n "${thumbnail:-}" && -f "$thumbnail" ]] && matugen_target="$thumbnail"
+    [[ -n "${color_source:-}" && -f "$color_source" ]] && matugen_target="$color_source"
+    if command -v matugen >/dev/null 2>&1 && [[ -n "$matugen_target" && -f "$matugen_target" ]]; then
+        local matugen_scheme="${type_flag:-scheme-tonal-spot}"
+        [[ "$matugen_scheme" == "auto" ]] && matugen_scheme="scheme-tonal-spot"
+        matugen image "$matugen_target" --prefer saturation -m "${mode_flag:-dark}" -t "$matugen_scheme" >/dev/null 2>&1 || true
+    fi
 }
 
 write_generated_wallpaper_path() {
@@ -593,7 +600,9 @@ switch() {
     [[ "$cfg_color_invert" == "true" ]] && generate_colors_material_args+=(--invert-hue)
 
     # Generate colors and render templates in one unified Python pass
-    if [[ -n "${INIR_VENV:-}" ]]; then
+    if [[ -n "${INIR_PYTHON:-}" && -x "$INIR_PYTHON" ]]; then
+        _ii_python="$INIR_PYTHON"
+    elif [[ -n "${INIR_VENV:-}" ]]; then
         _ii_venv="$(eval echo "$INIR_VENV")"
     elif [[ -n "${ILLOGICAL_IMPULSE_VIRTUAL_ENV:-}" ]]; then
         _ii_venv="$(eval echo "$ILLOGICAL_IMPULSE_VIRTUAL_ENV")"
@@ -601,8 +610,12 @@ switch() {
         _ii_venv="$HOME/.local/state/quickshell/.venv"
     fi
     source "$_ii_venv/bin/activate" 2>/dev/null || true
-    _ii_python="$_ii_venv/bin/python3"
+    [[ -z "${_ii_python:-}" ]] && _ii_python="$_ii_venv/bin/python3"
     [[ ! -x "$_ii_python" ]] && _ii_python="python3"
+    if ! "$_ii_python" -c "import materialyoucolor" >/dev/null 2>&1; then
+        _cand="$(find /nix/store -maxdepth 3 -name python3 -path '*-python3-*-env/bin/python3' 2>/dev/null | head -1)"
+        [[ -n "$_cand" && -x "$_cand" ]] && _ii_python="$_cand"
+    fi
 
     _scss_tmp="$STATE_DIR/user/generated/material_colors.scss.tmp"
     _json_tmp="$STATE_DIR/user/generated/colors.json.tmp"

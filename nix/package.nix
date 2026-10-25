@@ -181,6 +181,8 @@ pkgs.stdenvNoCC.mkDerivation {
       --prefix QT_PLUGIN_PATH : "${lib.makeSearchPath "lib/qt-6/plugins" qmlDeps}" \
       --prefix GI_TYPELIB_PATH : "${lib.makeSearchPath "lib/girepository-1.0" giDeps}" \
       ${materialSymbolsWrapperArg}
+      --set-default INIR_VENV "${pythonRuntime}" \
+      --set-default ILLOGICAL_IMPULSE_VIRTUAL_ENV "${pythonRuntime}" \
       --set-default INIR_SYSTEM_RUNTIME_DIR "$runtime" \
       --set-default INIR_FALLBACK_SYSTEM_RUNTIME_DIR "$runtime"
 
@@ -188,7 +190,8 @@ pkgs.stdenvNoCC.mkDerivation {
   '';
 
   passthru = {
-    inherit runtimeDeps qmlDeps;
+    inherit runtimeDeps pythonRuntime qmlDeps;
+    runtimeDependencies = runtimeDeps;
     qmlImportPath = lib.makeSearchPath "lib/qt-6/qml" qmlDeps;
     qtPluginPath = lib.makeSearchPath "lib/qt-6/plugins" qmlDeps;
   };

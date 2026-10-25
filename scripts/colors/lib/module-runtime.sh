@@ -108,6 +108,10 @@ write_if_changed() {
 }
 
 venv_python() {
+  if [[ -n "${INIR_PYTHON:-}" && -x "$INIR_PYTHON" ]]; then
+    printf '%s\n' "$INIR_PYTHON"
+    return 0
+  fi
   local venv_path
   if [[ -n "${INIR_VENV:-}" ]]; then
     venv_path="$(eval echo "$INIR_VENV")"
@@ -120,9 +124,17 @@ venv_python() {
   local candidate="$venv_path/bin/python3"
   if [[ -x "$candidate" ]]; then
     printf '%s\n' "$candidate"
-  else
-    printf '%s\n' python3
+    return 0
   fi
+  if ! python3 -c "import materialyoucolor" >/dev/null 2>&1; then
+    local nix_py
+    nix_py="$(find /nix/store -maxdepth 3 -name python3 -path '*-python3-*-env/bin/python3' 2>/dev/null | head -1)"
+    if [[ -n "$nix_py" && -x "$nix_py" ]]; then
+      printf '%s\n' "$nix_py"
+      return 0
+    fi
+  fi
+  printf '%s\n' python3
 }
 
 run_module_script() {
