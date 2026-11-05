@@ -311,11 +311,14 @@ audio_source_exists() {
     pactl list sources short 2>/dev/null | awk -v source_name="$source_name" '$2 == source_name { found=1 } END { exit(found ? 0 : 1) }'
 }
 
-notify_audio_fallback() {
-    local message="$1"
-    if is_truthy "$SHOW_NOTIFICATIONS"; then
-        notify-send "Recorder audio fallback" "$message" -a 'Recorder' & disown
+notify_recorder() {
+    if is_truthy "${SHOW_NOTIFICATIONS:-true}" && command -v notify-send >/dev/null 2>&1; then
+        notify-send "$1" "$2" -a 'Recorder' & disown
     fi
+}
+
+notify_audio_fallback() {
+    notify_recorder "Recorder audio fallback" "$1"
 }
 
 cleanup_audio_mix() {
@@ -439,8 +442,15 @@ prepare_audio_capture() {
 }
 
 getactivemonitor() {
-    if command -v niri >/dev/null 2>&1 && niri msg focused-output >/dev/null 2>&1; then
-        niri msg focused-output 2>/dev/null | head -n 1 | sed -n 's/.*(\(.*\))/\1/p' || true
+    local socket="${NIRI_SOCKET:-}"
+    if [[ -z "$socket" ]]; then
+        local candidate
+        for candidate in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/niri.*.sock; do
+            [[ -S "$candidate" ]] && { socket="$candidate"; break; }
+        done
+    fi
+    if command -v niri >/dev/null 2>&1 && NIRI_SOCKET="${socket:-}" niri msg focused-output >/dev/null 2>&1; then
+        NIRI_SOCKET="${socket:-}" niri msg focused-output 2>/dev/null | head -n 1 | sed -n 's/.*(\(.*\))/\1/p' || true
     elif command -v hyprctl >/dev/null 2>&1; then
         hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' || true
     fi
@@ -567,7 +577,6 @@ is_default_recorder_value() {
 build_common_args() {
     common_args=(
         -f "$output_file"
-        -t
         -r "$FPS"
     )
 
@@ -620,7 +629,6 @@ build_safe_fallback_common_args() {
     fallback_common_args=(
         --pixel-format yuv420p
         -f "$output_file"
-        -t
         -r "$FPS"
     )
     if has_ffmpeg_encoder libx264; then
@@ -689,8 +697,12 @@ start_recording_command() {
         preferred_cmd+=(--geometry "$geometry")
         fallback_cmd+=(--geometry "$geometry")
     else
-        preferred_cmd+=(-o "$(getactivemonitor)")
-        fallback_cmd+=(-o "$(getactivemonitor)")
+        local active_monitor
+        active_monitor="$(getactivemonitor)"
+        if [[ -n "$active_monitor" ]]; then
+            preferred_cmd+=(-o "$active_monitor")
+            fallback_cmd+=(-o "$active_monitor")
+        fi
     fi
 
     preferred_cmd+=("${common_args[@]}" "${audio_args[@]}")
@@ -707,12 +719,10 @@ start_recording_command() {
         fallback_cmd+=(-R "$AUDIO_SAMPLE_RATE")
     fi
 
-    if is_truthy "$SHOW_NOTIFICATIONS"; then
-        notify-send "Starting recording" "$output_name — $(audio_mode_description "$AUDIO_MODE")" -a 'Recorder' & disown
-    fi
+    notify_recorder "Starting recording" "$output_name — $(audio_mode_description "$AUDIO_MODE")"
     if ! run_recorder_process "${preferred_cmd[@]}"; then
         if is_truthy "$ENABLE_FALLBACK"; then
-            if is_truthy "$SHOW_NOTIFICATIONS"; then notify-send "Recording fallback" "Preferred encoder failed, retrying with safe mode" -a 'Recorder' & disown; fi
+            notify_recorder "Recording fallback" "Preferred encoder failed, retrying with safe mode"
             run_recorder_process "${fallback_cmd[@]}"
         else
             return 1
@@ -852,10 +862,16 @@ fi
 # Fallback to XDG Videos if config path is empty
 if [[ -z "$SAVE_PATH" ]]; then
     xdgvideo="$(xdg-user-dir VIDEOS 2>/dev/null || true)"
-    if [[ $xdgvideo = "$HOME" ]]; then
-        SAVE_PATH="$HOME/Videos"
-    else
+    if [[ -z "$xdgvideo" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" ]]; then
+        # shellcheck disable=SC1090
+        xdgvideo="$(source "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" 2>/dev/null && printf '%s\n' "${XDG_VIDEOS_DIR:-}")"
+    fi
+    if [[ -n "$xdgvideo" && "$xdgvideo" != "$HOME" ]]; then
         SAVE_PATH="$xdgvideo"
+    elif [[ -d "$HOME/Videolar" ]]; then
+        SAVE_PATH="$HOME/Videolar"
+    else
+        SAVE_PATH="$HOME/Videos"
     fi
 fi
 
@@ -876,7 +892,7 @@ for ((i=0;i<${#ARGS[@]};i++)); do
                 MANUAL_REGION="${ARGS[i+1]}"
                 ((i+=1))
             else
-                if is_truthy "$SHOW_NOTIFICATIONS"; then notify-send "Recording cancelled" "No region specified for --region" -a 'Recorder' & disown; fi
+                notify_recorder "Recording cancelled" "No region specified for --region"
                 exit 1
             fi
             ;;
@@ -897,8 +913,8 @@ done
 if [[ $STOP_ONLY -eq 1 ]]; then
     if pgrep -x wf-recorder >/dev/null 2>&1; then
         stop_running_recorder || true
-    elif is_truthy "$SHOW_NOTIFICATIONS"; then
-        notify-send "Recorder" "No active recording" -a 'Recorder' & disown
+    else
+        notify_recorder "Recorder" "No active recording"
     fi
     exit 0
 fi
@@ -921,7 +937,7 @@ if [[ $FULLSCREEN_FLAG -ne 1 ]]; then
         recording_geometry="$MANUAL_REGION"
     else
         if ! recording_geometry="$(slurp 2>&1)"; then
-            if is_truthy "$SHOW_NOTIFICATIONS"; then notify-send "Recording cancelled" "Selection was cancelled" -a 'Recorder' & disown; fi
+            notify_recorder "Recording cancelled" "Selection was cancelled"
             exit 1
         fi
     fi
@@ -936,8 +952,8 @@ build_safe_fallback_common_args
 if start_recording_command "$recording_geometry" "$output_name"; then
     cleanup_audio_mix
     cleanup_recorder_status
-    if [[ -s "$output_file" ]] && is_truthy "$SHOW_NOTIFICATIONS"; then
-        notify-send "Recording saved" "${SAVE_PATH%/}/$output_name" -a 'Recorder' & disown
+    if [[ -s "$output_file" ]]; then
+        notify_recorder "Recording saved" "${SAVE_PATH%/}/$output_name"
     fi
     maybe_compress_recording "$output_file"
 else
