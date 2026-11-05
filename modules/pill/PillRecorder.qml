@@ -59,7 +59,7 @@ PillSurface {
     }
 
     function start(fullscreen) {
-        const args = ["/usr/bin/bash", Directories.recordScriptPath];
+        const args = [Directories.recordScriptPath];
         if (fullscreen)
             args.push("--fullscreen");
         if (root.withSound)
@@ -72,7 +72,7 @@ PillSurface {
     }
 
     function stop() {
-        Quickshell.execDetached(["/usr/bin/bash", Directories.recordScriptPath, "--stop"]);
+        Quickshell.execDetached([Directories.recordScriptPath, "--stop"]);
         RecorderStatus.scheduleQuickCheck();
     }
 

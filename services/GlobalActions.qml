@@ -470,7 +470,7 @@ Singleton {
             category: "tools",
             keywords: ["record", "screen", "video", "capture", "wf-recorder", "audio", "microphone", "mic"],
             execute: () => {
-                const args = ["/usr/bin/bash", Directories.recordScriptPath]
+                const args = [Directories.recordScriptPath]
                 if (RecorderStatus.isRecording)
                     args.push("--stop")
                 else

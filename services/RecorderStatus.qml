@@ -204,7 +204,7 @@ Singleton {
 
     Process {
         id: metadataProcess
-        command: ["/usr/bin/cat", root.recorderStatusPath]
+        command: ["cat", root.recorderStatusPath]
         stdout: StdioCollector {
             id: metadataCollector
         }
@@ -233,7 +233,7 @@ Singleton {
 
     Process {
         id: checkProcess
-        command: ["/usr/bin/pgrep", "-xo", "wf-recorder"]
+        command: ["pgrep", "-xo", "wf-recorder"]
         stdout: StdioCollector {
             id: recorderPidCollector
         }

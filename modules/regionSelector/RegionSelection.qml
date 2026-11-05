@@ -412,14 +412,14 @@ PanelWindow {
                     japaneseOcrProc.running = true;
                     return;
                 }
-                snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && { '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}' | tee >('${clipboardCopy}' --primary) | '${clipboardCopy}'; _ocr_status=\${PIPESTATUS[0]}; ${cleanup}; if (( _ocr_status == 0 )); then /usr/bin/notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000; else /usr/bin/notify-send "OCR failed" "The selected OCR language is unavailable or recognition failed" -a "OCR" -i dialog-error -t 4000; exit \$_ocr_status; fi; }`];
+                snipProc.command = ["bash", "-c", `${cropInPlace} && { '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}' | tee >('${clipboardCopy}' --primary) | '${clipboardCopy}'; _ocr_status=\${PIPESTATUS[0]}; ${cleanup}; if (( _ocr_status == 0 )); then notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000; else notify-send "OCR failed" "The selected OCR language is unavailable or recognition failed" -a "OCR" -i dialog-error -t 4000; exit \$_ocr_status; fi; }`];
                 break;
             }
             case RegionSelection.SnipAction.Record:
-                snipProc.command = ["/usr/bin/bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
+                snipProc.command = ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
                 break;
             case RegionSelection.SnipAction.RecordWithSound:
-                snipProc.command = ["/usr/bin/bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
+                snipProc.command = ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
                 break;
             default:
                 root.dismiss();
