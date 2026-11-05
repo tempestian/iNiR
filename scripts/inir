@@ -1888,8 +1888,12 @@ apply_qt_runtime_env() {
         local _qs_sys_path
         _qs_sys_path="$(grep '^PATH=' <<< "$_qs_sys_env" | head -1 | cut -d= -f2- || true)"
         if [[ -n "$_qs_sys_path" && "$_qs_sys_path" != "$PATH" ]]; then
-            local _qs_merged="$_qs_sys_path"
-            for _qs_p in /usr/local/bin /usr/bin; do
+            local _qs_merged="$PATH"
+            local _qs_extra_path="$_qs_sys_path:/usr/local/bin:/usr/bin"
+            local _qs_p
+            local IFS=:
+            for _qs_p in $_qs_extra_path; do
+                [[ -z "$_qs_p" ]] && continue
                 case ":${_qs_merged}:" in
                     *":${_qs_p}:"*) ;;
                     *) _qs_merged="${_qs_merged}:${_qs_p}" ;;
