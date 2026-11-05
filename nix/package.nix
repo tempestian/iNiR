@@ -19,7 +19,7 @@ let
   pythonRuntime = pkgs.python3.withPackages (ps: [
     ps.click
     ps.evdev
-    ps.kde-material-you-colors
+    (ps.kde-material-you-colors or pkgs.kde-material-you-colors)
     ps.loguru
     ps.material-color-utilities
     ps.materialyoucolor
