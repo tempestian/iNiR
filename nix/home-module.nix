@@ -26,7 +26,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ] ++ cfg.package.passthru.runtimeDependencies ++ cfg.extraPackages
+    home.packages = [ cfg.package ] ++ map lib.lowPrio cfg.package.passthru.runtimeDependencies ++ cfg.extraPackages
       ++ lib.optionals cfg.fonts.enable cfg.package.passthru.deps.fonts;
     fonts.fontconfig.enable = lib.mkIf cfg.fonts.enable true;
 
