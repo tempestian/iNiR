@@ -64,6 +64,19 @@ pkgs.stdenvNoCC.mkDerivation {
     bash -c 'source sdata/lib/runtime-payload.sh && runtime_payload copy --root . --target "$1"' _ "$payload"
     chmod +x "$payload/setup" "$payload/scripts/inir"
 
+    # Populate SDDM theme shapes and fonts so dots/sddm/pixel is self-contained for external modules
+    mkdir -p "$payload/dots/sddm/pixel/shapes" "$payload/dots/sddm/pixel/fonts"
+    cp -r --no-preserve=mode,ownership "$payload/modules/common/widgets/shapes/." "$payload/dots/sddm/pixel/shapes/"
+    if [ -d "$payload/assets/fonts/rubik" ]; then
+      cp -r --no-preserve=mode,ownership "$payload/assets/fonts/rubik"/Rubik-*.ttf "$payload/dots/sddm/pixel/fonts/" 2>/dev/null || true
+    fi
+    if [ -d "$payload/assets/fonts/inter" ]; then
+      cp -r --no-preserve=mode,ownership "$payload/assets/fonts/inter"/Inter-*.ttf "$payload/dots/sddm/pixel/fonts/" 2>/dev/null || true
+    fi
+    if [ -d "${pkgs.material-symbols}/share/fonts/truetype" ]; then
+      cp -r --no-preserve=mode,ownership "${pkgs.material-symbols}/share/fonts/truetype"/MaterialSymbolsRounded*.ttf "$payload/dots/sddm/pixel/fonts/MaterialSymbolsRounded.ttf" 2>/dev/null || true
+    fi
+
     jq -n --arg v ${lib.escapeShellArg version} --arg c ${lib.escapeShellArg commit} --arg h ${lib.escapeShellArg updateHint} '{
       version: $v, commit: $c, source: "nix",
       installMode: "package-managed", updateStrategy: "package-manager",

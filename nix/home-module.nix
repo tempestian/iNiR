@@ -19,6 +19,12 @@ in
     description = "Install the fonts iNiR's styles use.";
   };
 
+  options.programs.inir.configSymlink.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Deprecated compatibility option (v3.1+ manages ~/.config/quickshell/inir via setup).";
+  };
+
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ] ++ cfg.package.passthru.runtimeDependencies ++ cfg.extraPackages
       ++ lib.optionals cfg.fonts.enable cfg.package.passthru.deps.fonts;
